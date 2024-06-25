@@ -11,7 +11,6 @@ public class OrderDetails {
     int createDate;
     
 
-
     private void cancelOrder(){
         
     }
