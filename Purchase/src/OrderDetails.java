@@ -9,8 +9,8 @@ public class OrderDetails {
     double shippingCost;
     String billingAddress;
     int createDate;
-    String shippingDate;
     
+
 
     private void cancelOrder(){
         
