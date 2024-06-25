@@ -1,6 +1,5 @@
-/**
- * OrderDetails
- */
+package cartshipping;
+
 public class OrderDetails {
 
     int id;
@@ -11,9 +10,8 @@ public class OrderDetails {
     int createDate;
     
 
-    private void cancelOrder(){
+    public void cancelOrder(){
         
     }
 
-    
 }
