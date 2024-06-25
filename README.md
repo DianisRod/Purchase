@@ -3,9 +3,9 @@ https://www.google.com/imgres?imgurl=https://cdn.venngage.com/template/thumbnail
 
 The goal is, create a purchse website. For this we need:
 
-001. Create a Main class for run
-002. Create one user interface with HTML 
-003. Create a Database to store data
+001. Create one user interface with HTML in Branch 001--Diana
+002. Create a Database to store data
+003. Create a Main class for run
 004. Find a json or create with Products for the frontend. 
 005. Give functions to the HTML with Javacript
 006. create Test for every Class before Backend-coding
