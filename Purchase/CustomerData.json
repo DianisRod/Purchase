@@ -1,0 +1,14 @@
+{
+    "LoginList":[
+        { "username":"Diana", "password":"12345"},
+        { "username":"Admin", "password":"Admin"},
+        { "username":"Janna", "password":"J1234"}
+    ],
+
+
+    "PersonalData":[
+        {"name":"Diana", "address":"Kamp 23", "defaultShippingAddress":"kamp 23"},
+        {"name":"Admin", "address":"Lunne 98", "defaultShippingAddress":"post 325"},
+        {"name":"Janna", "address":"Arena 01", "defaultShippingAddress":"post 123"}
+    ]
+}
