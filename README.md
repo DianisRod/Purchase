@@ -7,7 +7,7 @@ The goal is, create a purchse website. For this we need:
 2. Create one user interface with HTML 
 3. Create a Database to store data
 4. Find a json or create with Products for the frontend. 
-5. Give fuktions to the HTML with Javacript
+5. Give functions to the HTML with Javacript
 6. create Test for every Class before Backend-coding
 7. Give code to the Backend "Java-Folder" 
 8. Connect frontend with Backend 
