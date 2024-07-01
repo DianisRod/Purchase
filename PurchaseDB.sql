@@ -7,6 +7,8 @@ password: Project001
 \dt //Listar las tablas
 \d users// Estructura de la tabla
 \c login //Ingresa a la base de datos
+-- Otorgar permisos de superusuario
+ALTER USER sebastian WITH SUPERUSER;
 
 
 -- Conectarse a PostgreSQL y crear la base de datos login (ejecutar en el terminal)
@@ -22,7 +24,7 @@ CREATE DATABASE purchase;
 CREATE USER sebastian WITH PASSWORD 'Project001';
 GRANT ALL PRIVILEGES ON DATABASE purchase TO sebastian;
 
--- Crear la tabla users con estado por defecto TRUE y un trigger para actualizar el estado al eliminar
+-- Crear la tabla users
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE,
@@ -30,7 +32,7 @@ CREATE TABLE users (
     status BOOLEAN DEFAULT TRUE
 );
 
--- Crear la tabla eliminaciones_log para registrar eliminaciones
+-- Crear la tabla eliminaciones_log
 CREATE TABLE eliminaciones_log (
     id SERIAL PRIMARY KEY,
     tabla_afectada VARCHAR(100) NOT NULL,
@@ -43,7 +45,7 @@ CREATE TABLE eliminaciones_log (
 CREATE TABLE customers (
     user_id INTEGER PRIMARY KEY,
     name VARCHAR(50) NOT NULL,
-    email VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
     address VARCHAR(255) NOT NULL,
     CONSTRAINT fk_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
 );
@@ -60,7 +62,8 @@ CREATE TABLE carts (
     cartID SERIAL PRIMARY KEY,
     userID INTEGER NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (userID) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY (userID) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT unique_cart_user UNIQUE (userID)
 );
 
 -- Crear la tabla cart_items
@@ -71,7 +74,8 @@ CREATE TABLE cart_items (
     quantity INTEGER NOT NULL DEFAULT 1,
     added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (cartID) REFERENCES carts(cartID) ON DELETE CASCADE,
-    FOREIGN KEY (productID) REFERENCES products(productID) ON DELETE CASCADE
+    FOREIGN KEY (productID) REFERENCES products(productID) ON DELETE CASCADE,
+    CONSTRAINT unique_cart_product UNIQUE (cartID, productID)
 );
 
 -- Crear la tabla orders
@@ -79,30 +83,35 @@ CREATE TABLE orders (
     orderID SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL,
     orderDate DATE DEFAULT CURRENT_DATE,
+    status BOOLEAN DEFAULT TRUE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Crear la tabla order_items
+CREATE TABLE order_items (
+    orderItemID SERIAL PRIMARY KEY,
+    orderID INTEGER NOT NULL,
     productID INTEGER NOT NULL,
     price DECIMAL(10, 2) NOT NULL,
-    status BOOLEAN DEFAULT TRUE,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    quantity INTEGER NOT NULL,
+    FOREIGN KEY (orderID) REFERENCES orders(orderID) ON DELETE CASCADE,
     FOREIGN KEY (productID) REFERENCES products(productID) ON DELETE CASCADE
 );
 
--- Crear la tabla eliminaciones_orders para registrar eliminaciones
+-- Crear la tabla eliminaciones_orders
 CREATE TABLE eliminaciones_orders (
-    orderID SERIAL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     tabla_afectada VARCHAR(100) NOT NULL,
     id_registro_eliminado INTEGER NOT NULL,
     fecha_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     usuario VARCHAR(100) NOT NULL
 );
-
--- FUNCIONES
-
 -- Función para registrar eliminaciones en eliminaciones_log
 CREATE OR REPLACE FUNCTION registrar_eliminacion()
 RETURNS TRIGGER AS $$
 BEGIN
     INSERT INTO eliminaciones_log (tabla_afectada, id_registro_eliminado, usuario)
-    VALUES ('users', OLD.id, current_user);
+    VALUES (TG_TABLE_NAME, OLD.id, current_user);
     RETURN OLD;
 END;
 $$ LANGUAGE plpgsql;
@@ -153,8 +162,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- TRIGGERS
-
 -- Trigger para ejecutar la función actualizar_estado después de DELETE en users
 CREATE TRIGGER trigger_actualizar_estado
 AFTER DELETE ON users
@@ -185,58 +192,72 @@ AFTER DELETE ON orders
 FOR EACH ROW
 EXECUTE FUNCTION order_eliminacion();
 
+--PRUEBAS
 
--- PRUEBAS
+-- Insertar usuarios
+INSERT INTO users (username, password) VALUES ('usuario1', 'password1');
+INSERT INTO users (username, password) VALUES ('usuario2', 'password2');
 
--- Insertar datos de ejemplo en la tabla users
-INSERT INTO users (username, password) VALUES 
-('usuario1', 'contraseña1'),
-('usuario2', 'contraseña2'),
-('usuario3', 'contraseña3');
+-- Insertar productos
+INSERT INTO products (productName, price) VALUES ('Producto 1', 9.99);
+INSERT INTO products (productName, price) VALUES ('Producto 2', 19.99);
 
--- Insertar datos de ejemplo en la tabla products
-INSERT INTO products (productName, price) VALUES 
-('Product1', 10.00),
-('Product2', 20.00),
-('Product3', 30.00);
-
--- Crear un carrito para usuario1
+-- Insertar carritos
 INSERT INTO carts (userID) VALUES (1);
+INSERT INTO carts (userID) VALUES (2);
 
--- Agregar productos al carrito de usuario1
-INSERT INTO cart_items (cartID, productID, quantity) VALUES
-(1, 1, 2),
-(1, 2, 1);
+-- Insertar items en carritos
+INSERT INTO cart_items (cartID, productID, quantity) VALUES 
+ (1, 1, 2),
+ (1, 2, 1),
+ (2, 1, 1);
 
--- Insertar una orden para usuario1
-INSERT INTO orders (user_id, orderDate, productID, price) VALUES
-(1, CURRENT_DATE, 1, 10.00),
-(1, CURRENT_DATE, 2, 20.00);
+-- Insertar órdenes
+INSERT INTO orders (orderID, user_id) VALUES 
+(100, 1),
+(200, 2);
 
--- Consultar datos en la tabla users
+-- Consultar usuarios
 SELECT * FROM users;
 
--- Consultar datos en la tabla customers
+-- Consultar clientes
 SELECT * FROM customers;
 
--- Consultar datos en la tabla products
+-- Consultar productos
 SELECT * FROM products;
 
--- Consultar datos en la tabla carts
+-- Consultar carritos
 SELECT * FROM carts;
 
--- Consultar datos en la tabla cart_items
+-- Consultar items en carritos
 SELECT * FROM cart_items;
 
--- Consultar datos en la tabla orders
+-- Consultar órdenes
 SELECT * FROM orders;
 
--- Eliminar un usuario y verificar los registros de eliminación
-DELETE FROM users WHERE id = 2;
-
--- Consultar los registros de eliminaciones
+-- Consultar el log de eliminaciones
 SELECT * FROM eliminaciones_log;
 
+-- Consultar el log de eliminaciones de órdenes
+SELECT * FROM eliminaciones_orders;
 
+-- Eliminar un usuario
+DELETE FROM users WHERE id = 1;
 
+-- Eliminar una orden
+DELETE FROM orders WHERE orderid = 200;
 
+-- Consultar usuarios
+SELECT * FROM users;
+
+-- Consultar clientes
+SELECT * FROM customers;
+
+-- Consultar el log de eliminaciones
+SELECT * FROM eliminaciones_log;
+
+-- Consultar órdenes
+SELECT * FROM orders;
+
+-- Consultar el log de eliminaciones de órdenes
+SELECT * FROM eliminaciones_orders;
