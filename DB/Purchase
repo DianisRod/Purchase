@@ -1,0 +1,194 @@
+
+Username: psql -U sebastian
+password: Project001
+-- comands
+\l //Listar bases de datos
+\du //Lista roles de usaurios
+\dt //Listar las tablas
+\d users// Estructura de la tabla
+\c purchase //Ingresa a la base de datos
+
+-- Give permission to SuperUser
+ALTER USER sebastian WITH SUPERUSER;
+
+
+-- Connect to PostgreSQL 
+psql -U postgres
+
+
+-- Create database
+CREATE DATABASE purchase;
+
+-- Connect to database
+\c purchase
+
+--TABLES
+-- Create user with all permissions
+CREATE USER sebastian WITH PASSWORD 'Project001';
+GRANT ALL PRIVILEGES ON DATABASE purchase TO sebastian;
+
+-- Create table for users
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    address VARCHAR(255) NOT NULL,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    status BOOLEAN DEFAULT TRUE
+);
+
+-- Create table for users_del
+CREATE TABLE users_del (
+    id SERIAL PRIMARY KEY,
+    affected_table VARCHAR(100) NOT NULL,
+    reg_id_del INTEGER NOT NULL,
+    date_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    username VARCHAR(100) NOT NULL
+);
+
+-- Create table for products
+CREATE TABLE products (
+    productID SERIAL PRIMARY KEY,
+    productName VARCHAR(50) NOT NULL,
+    price DECIMAL(10, 2) NOT NULL,
+    stock INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
+);
+
+-- Create table for cart
+CREATE TABLE cart (
+    cartID SERIAL PRIMARY KEY,
+    userID INTEGER NOT NULL,
+    productID INTEGER NOT NULL,
+    quantity INTEGER NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (userID) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (productID) REFERENCES products(productID),
+    CONSTRAINT unique_cart_user UNIQUE (userID, productID)
+);
+
+-- Create table for orders
+CREATE TABLE orders (
+    orderID SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    orderDate DATE DEFAULT CURRENT_DATE,
+    productID INTEGER NOT NULL,
+    price DECIMAL(10, 2) NOT NULL,
+    quantity INTEGER NOT NULL,
+    status BOOLEAN DEFAULT TRUE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (productID) REFERENCES products(productID)
+);
+
+-- Create table for orders_del
+CREATE TABLE orders_del (
+    id SERIAL PRIMARY KEY,
+    affected_table VARCHAR(100) NOT NULL,
+    reg_id_del INTEGER NOT NULL,
+    date_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    username VARCHAR(100) NOT NULL
+);
+
+-- FUNCTIONS
+-- 
+-- 
+
+CREATE OR REPLACE FUNCTION handle_user_delete()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Function to update status to FALSE at delete a users' register
+    UPDATE users
+    SET status = FALSE
+    WHERE id = OLD.id;
+
+    -- Function to register deletes on users_del
+    INSERT INTO users_del (affected_table, reg_id_del, username)
+    VALUES ('users', OLD.id, current_user);
+
+    -- avoid real elimination from register
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to register deletes on orders_del
+-- 
+CREATE OR REPLACE FUNCTION handle_order_delete()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Function to update status to FALSE at delete a orders' register
+    UPDATE orders
+    SET status = FALSE
+    WHERE orderID = OLD.orderID;
+
+    -- Function to register deletes on orders_del
+    INSERT INTO orders_del (affected_table, reg_id_del, username)
+    VALUES ('orders', OLD.orderID, current_user);
+
+    -- avoid real elimination from register
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+-- TRIGGERS
+
+-- Trigger for execute function handle_user_delete before a DELETE on table users
+
+CREATE TRIGGER before_delete_user
+BEFORE DELETE ON users
+FOR EACH ROW
+EXECUTE FUNCTION handle_user_delete();
+
+-- Trigger for execute function update_order after a DELETE on table orders
+
+CREATE TRIGGER before_delete_order
+BEFORE DELETE ON orders
+FOR EACH ROW
+EXECUTE FUNCTION handle_order_delete();
+
+--TESTS
+-- Add users
+INSERT INTO users (name, email, address, username, password) 
+VALUES 
+('John Cortes', 'john@gmail.com', '123 calle 10', 'johnC', '12345'),
+('carlos Forero', 'Carlos@gmail.com', 'cra 10 numero 12', 'carlosF', '45612');
+
+-- Add products
+INSERT INTO products (productName, price, stock) 
+VALUES 
+('Celular', 1800.50, 100),
+('Computador', 2340.50, 200);
+
+-- Add products in a cart
+INSERT INTO cart (userID, productID, quantity) 
+VALUES 
+(1, 1, 2),
+(2, 2, 3);
+
+-- Add orders
+INSERT INTO orders (user_id, productID, price, quantity) 
+VALUES 
+(1, 1, 10.00, 2),
+(2, 2, 20.00, 3);
+
+-- Detele user
+DELETE FROM users WHERE id = 1;
+
+-- Verify the status on users_del
+SELECT * FROM users WHERE id = 1;
+SELECT * FROM users_del WHERE reg_id_del = 1;
+
+-- Delete a order
+DELETE FROM orders WHERE orderID = 1;
+
+-- Verify the status on orders_del
+SELECT * FROM orders WHERE orderID = 1;
+SELECT * FROM orders_del WHERE reg_id_del = 1;
+
+-- Verify data on all tables
+SELECT * FROM users;
+SELECT * FROM products;
+SELECT * FROM cart;
+SELECT * FROM orders;
+SELECT * FROM users_del;
+SELECT * FROM orders_del;
