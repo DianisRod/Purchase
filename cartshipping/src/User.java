@@ -1,3 +1,5 @@
+package cartshipping.src;
+
 /**
  * User
  */
@@ -7,7 +9,7 @@ public class User {
     String password;
     
     
-    private void getSession(){
+    public void getSession(){
         
     }
 
