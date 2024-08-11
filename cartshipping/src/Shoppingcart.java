@@ -1,3 +1,4 @@
+package cartshipping.src;
 public class Shoppingcart {
 
     String productName;
