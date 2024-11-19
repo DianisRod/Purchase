@@ -1,4 +1,4 @@
-package cartshipping.src;
+package cartshipping;
 
 public class OrderDetails {
 
